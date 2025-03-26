@@ -21,3 +21,6 @@ discord_imagebot-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# startup script containing envvar
+start.fish

@@ -8,12 +8,18 @@ defmodule DiscordImagebot.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: DiscordImagebot.Worker.start_link(arg)
-      # {DiscordImagebot.Worker, arg}
+      {Nostrum.Bot,
+       %{
+         name: DiscordImagebot,
+         consumer: DiscordImagebot.Consumer,
+         intents: [:message_content, :guild_messages],
+         wrapped_token: fn ->
+           System.fetch_env!("DC_TOKEN")
+         end
+       }},
+      DiscordImagebot.ServerManager
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: DiscordImagebot.Supervisor]
     Supervisor.start_link(children, opts)
   end
