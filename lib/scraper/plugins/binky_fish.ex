@@ -3,6 +3,7 @@ defmodule Scraper.Plugins.BinkyFish do
   use Scraper.Plugin
 
   def name(), do: "Binkyfish"
+  def footer_icon_path(), do: "icons/binkyfish.png"
 
   def url_matches?(url) do
     url.authority == "binky.fish"

@@ -2,12 +2,13 @@ defmodule Scraper.Plugin do
   @callback scrape(url :: binary) :: {:ok, contents :: term} | {:error, reason :: term}
   @callback url_matches?(url :: binary) :: result :: boolean
   @callback name() :: name :: binary
+  @callback footer_icon_path() :: path :: binary
 
   def get_resp_file_info(resp) do
     with {:ok, mime_type} <- pull_mime_type_header(resp.headers),
          :ok <- verify_image_type(mime_type) do
       case MIME.extensions(mime_type) do
-        [file_ext | _] -> {:ok, mime_type, file_ext}
+        [file_ext | _] -> {:ok, mime_type, "." <> file_ext}
         [] -> {:error, "no file extension"}
       end
     end
@@ -61,6 +62,10 @@ defmodule Scraper.Plugin do
       end
 
       defoverridable download_file: 1
+
+      def footer_icon() do
+        Scraper.IconCache.get_icon(footer_icon_path())
+      end
     end
   end
 end

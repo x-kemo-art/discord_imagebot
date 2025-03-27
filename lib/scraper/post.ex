@@ -20,6 +20,7 @@ defmodule Scraper.Post do
     :files,
     :timestamp,
     :post_url,
+    :embed,
     :plugin
   ]
 end

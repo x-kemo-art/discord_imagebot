@@ -1,4 +1,5 @@
 defmodule DiscordImagebot.MessageTask do
+  alias Scraper.Post
   alias Nostrum.Struct.Embed.Footer
   alias Nostrum.Struct.Embed.Author
   alias Nostrum.Struct.Embed
@@ -14,44 +15,89 @@ defmodule DiscordImagebot.MessageTask do
     posts =
       pull_valid_targets(msg.content)
       |> Scraper.download()
+      |> Stream.map(&reformat_files(&1))
+      |> Enum.map(&finish_post(&1))
 
-    embeds = generate_embeds(posts)
+    for post <- posts do
+      IO.inspect(post)
 
-    {:ok, _msg} =
-      Message.create(msg.channel_id, %{
-        content: "hello",
-        embeds: embeds
-      })
+      {:ok, _msg} =
+        Message.create(msg.channel_id, %{
+          embeds: [post.embed],
+          files: post.files
+        })
+    end
 
     ServerNode.finish_embed_job(caller)
   end
 
-  defp generate_embeds(posts) do
-    posts
-    |> Enum.map(fn post ->
-      author_name =
-        case {post.display_name, post.username} do
-          {nil, nil} -> "unknown author"
-          {nil, _} -> post.username
-          {_, nil} -> post.display_name
-          {_, _} -> "#{post.display_name} (#{post.username})"
-        end
+  defp reformat_files(post = %Post{}) do
+    files =
+      post.files
+      |> Enum.reduce(
+        [],
+        fn file, acc ->
+          suffix = length(acc) |> Integer.to_string()
+          {:ok, data, _mime_type, file_ext} = file
 
-      %Embed{
-        author: %Author{
-          name: author_name,
-          url: post.author_url
-        },
-        footer: %Footer{
-          text: post.plugin.name()
-        },
-        description: post.text,
-        timestamp: post.timestamp,
-        title: Map.get(post, :title),
-        url: post.post_url,
-        color: 0xF8E45C
-      }
-    end)
+          [
+            %{
+              name: "attachment_#{suffix}#{file_ext}",
+              body: data
+            }
+            | acc
+          ]
+        end
+      )
+
+    IO.inspect(files)
+    %{post | files: files}
+  end
+
+  defp finish_post(post = %Post{}) do
+    author_name =
+      case {post.display_name, post.username} do
+        {nil, nil} -> "unknown author"
+        {nil, _} -> post.username
+        {_, nil} -> post.display_name
+        {_, _} -> "#{post.display_name} (#{post.username})"
+      end
+
+    {footer_icon_bytes, footer_icon_ext} = post.plugin.footer_icon()
+    {:ok, avatar_bytes, _mime_type, avatar_ext} = post.plugin.download_file(post.avatar_url)
+
+    embed = %Embed{
+      author: %Author{
+        name: author_name,
+        url: post.author_url,
+        icon_url: "attachment://avatar" <> avatar_ext
+      },
+      footer: %Footer{
+        text: post.plugin.name(),
+        icon_url: "attachment://footer" <> footer_icon_ext
+      },
+      description: post.text,
+      timestamp: post.timestamp,
+      title: Map.get(post, :title),
+      url: post.post_url,
+      color: 0xF8E45C
+    }
+
+    %{
+      post
+      | embed: embed,
+        files: [
+          %{
+            name: "footer" <> footer_icon_ext,
+            body: footer_icon_bytes
+          },
+          %{
+            name: "avatar" <> avatar_ext,
+            body: avatar_bytes
+          }
+          | post.files
+        ]
+    }
   end
 
   defp pull_valid_targets(msg_content) do

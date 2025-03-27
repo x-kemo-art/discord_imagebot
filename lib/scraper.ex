@@ -1,6 +1,4 @@
 defmodule Scraper do
-  alias Scraper.Post
-
   @services [
     Scraper.Plugins.BinkyFish,
     Scraper.Plugins.Bsky,
@@ -22,7 +20,13 @@ defmodule Scraper do
     |> Enum.map(fn post ->
       files =
         post.files
-        |> Enum.map(&post.plugin.download_file(&1))
+        |> Stream.map(&post.plugin.download_file(&1))
+        |> Enum.reject(
+          &case &1 do
+            {:error, _} -> true
+            _ -> false
+          end
+        )
 
       %{post | files: files}
     end)

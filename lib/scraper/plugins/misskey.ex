@@ -3,6 +3,7 @@ defmodule Scraper.Plugins.Misskey do
   use Scraper.Plugin
 
   def name(), do: "Misskey"
+  def footer_icon_path(), do: ""
 
   def url_matches?(url) do
     String.contains?(url, "misskey.io")

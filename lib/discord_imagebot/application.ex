@@ -8,6 +8,8 @@ defmodule DiscordImagebot.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      Scraper.Supervisor,
+      DiscordImagebot.ServerManager,
       {Nostrum.Bot,
        %{
          name: DiscordImagebot,
@@ -16,8 +18,7 @@ defmodule DiscordImagebot.Application do
          wrapped_token: fn ->
            System.fetch_env!("DC_TOKEN")
          end
-       }},
-      DiscordImagebot.ServerManager
+       }}
     ]
 
     opts = [strategy: :one_for_one, name: DiscordImagebot.Supervisor]
